@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VentureIntel AI Pitch Analyzer</title>
+    <style>
+        :root {
+            --espresso: #2B1D16;
+            --mocha: #5A4033;
+            --caramel: #A67C52;
+            --latte: #C8A98A;
+            --cream: #FDFBF7;
+            --warm-beige: #E6D7C5;
+            --strong: #2F6B4F;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--warm-beige);
+            color: var(--espresso);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--cream);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--espresso);
+            border-bottom: 2px solid var(--caramel);
+            padding-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid var(--latte);
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--mocha);
+            color: var(--cream);
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: var(--espresso);
+        }
+
+        button:disabled {
+            background-color: var(--latte);
+            cursor: not-allowed;
+        }
+
+        #results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .score-box {
+            background: var(--espresso);
+            color: var(--cream);
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .section-title {
+            color: var(--mocha);
+            margin-top: 20px;
+            border-bottom: 1px solid var(--latte);
+            padding-bottom: 5px;
+        }
+
+        .error {
+            color: #9B2C2C;
+            background: #FDE8E8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>VentureIntel Pitch Analyzer</h1>
+        <p>Paste the startup's pitch deck text, executive summary, or financial notes below to get an instant AI evaluation.</p>
+        
+        <textarea id="pitchInput" placeholder="Paste investor pitch here..."></textarea>
+        <button id="analyzeBtn" onclick="analyzePitch()">Analyze Pitch</button>
+        
+        <div id="errorBox" class="error"></div>
+
+        <div id="results">
+            <div class="score-box">Score: <span id="scoreVal">--</span>/100</div>
+            
+            <h3 class="section-title">Key Strengths</h3>
+            <ul id="strengthsList"></ul>
+            
+            <h3 class="section-title">Key Risks</h3>
+            <ul id="risksList"></ul>
+            
+            <h3 class="section-title">Questions Investors Will Ask</h3>
+            <ul id="questionsList"></ul>
+        </div>
+    </div>
+
+    <script>
+        async function analyzePitch() {
+            const btn = document.getElementById('analyzeBtn');
+            const pitchText = document.getElementById('pitchInput').value.trim();
+            const errorBox = document.getElementById('errorBox');
+            const results = document.getElementById('results');
+            
+            errorBox.style.display = 'none';
+            results.style.display = 'none';
+            
+            if (!pitchText) {
+                errorBox.innerText = "Please enter some pitch text.";
+                errorBox.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Analyzing...";
+
+            try {
+                const response = await fetch('/.netlify/functions/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pitchText })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to analyze pitch');
+                }
+
+                // Populate results
+                document.getElementById('scoreVal').innerText = data.score;
+                
+                const formatList = (items) => items.map(i => `<li>${i}</li>`).join('');
+                document.getElementById('strengthsList').innerHTML = formatList(data.strengths);
+                document.getElementById('risksList').innerHTML = formatList(data.risks);
+                document.getElementById('questionsList').innerHTML = formatList(data.questions);
+
+                results.style.display = 'block';
+            } catch (err) {
+                errorBox.innerText = err.message;
+                errorBox.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Analyze Pitch";
+            }
+        }
+    </script>
+</body>
+</html>
